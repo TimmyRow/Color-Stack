@@ -20,6 +20,7 @@
   const bestHeightKey = "color-stack-best-height";
   const muteKey = "color-stack-muted";
   const colors = ["#f7c85b", "#8b5cf6", "#22c55e", "#ef4444"];
+  const rainbowColors = ["#f7c85b", "#8b5cf6", "#ef4444", "#22c55e"];
 
   let state;
   let rafId = 0;
@@ -46,12 +47,13 @@
       w: 490,
       dir: 0,
       color: colors[0],
+      rainbow: false,
       settled: true
     };
 
     curtain.querySelector(".label").textContent = "Color Stack";
     curtain.querySelector("h2").textContent = "Color Stack";
-    curtain.querySelector("p:not(.label)").textContent = "Stack the colors higher with clean drops and brave edge catches.";
+    curtain.querySelector("p:not(.label)").textContent = "Stack the colors higher. Land rainbow blocks to widen the tower.";
     playBtn.textContent = "Play";
 
     state = {
@@ -73,6 +75,7 @@
       stack: [base],
       chips: [],
       stars: [],
+      rings: [],
       active: null
     };
 
@@ -85,14 +88,20 @@
   function spawnSlab() {
     const top = state.stack[state.stack.length - 1];
     const fromLeft = state.stack.length % 2 === 0;
+    const rainbow = isRainbowTurn();
     state.active = {
       x: state.stack.length === 1 ? top.x : fromLeft ? -top.w - 30 : W + 30,
       y: top.y - slabH,
       w: top.w,
       dir: fromLeft ? 1 : -1,
-      color: colors[state.stack.length % colors.length],
+      color: rainbow ? "#ffffff" : colors[state.stack.length % colors.length],
+      rainbow,
       settled: false
     };
+  }
+
+  function isRainbowTurn() {
+    return state.stack.length > 1 && state.stack.length % 7 === 0;
   }
 
   function requestStart(resetFirst) {
@@ -159,7 +168,7 @@
     const overlap = right - left;
 
     if (overlap <= 0) {
-      state.chips.push(makeChip(active.x, active.y, active.w, active.color, active.dir));
+      state.chips.push(makeChip(active.x, active.y, active.w, active.color, active.dir, active.rainbow));
       gameOver();
       return;
     }
@@ -167,7 +176,7 @@
     const missLeft = active.x < top.x ? active.x : right;
     const missW = active.w - overlap;
     if (missW > 2) {
-      state.chips.push(makeChip(missLeft, active.y, missW, active.color, active.dir));
+      state.chips.push(makeChip(missLeft, active.y, missW, active.color, active.dir, active.rainbow));
     }
 
     const perfect = Math.abs(active.x - top.x) <= 10;
@@ -178,33 +187,50 @@
       w: Math.min(top.w + 22, overlap + bonus),
       dir: 0,
       color: active.color,
+      rainbow: active.rainbow,
       settled: true,
       perfect
     };
 
     state.stack.push(placed);
+    if (placed.rainbow) {
+      widenTower(34);
+    }
     state.score += perfect ? 10 * state.combo : 4 + Math.ceil(overlap / 34);
+    if (placed.rainbow) state.score += 25;
     state.combo = perfect ? Math.min(9, state.combo + 1) : 1;
     state.perfectRun = perfect ? state.perfectRun + 1 : 0;
     state.speed = Math.min(640, state.speed + 11 + state.combo * 1.5);
-    state.message = perfect ? "Perfect +" + state.combo : "Nice";
-    state.messageT = 0.75;
-    state.bump = perfect ? 22 : 10;
-    state.shake = Math.max(state.shake, perfect ? 5 : 2);
-    burst(placed.x + placed.w / 2, placed.y + slabH / 2, perfect ? state.combo + 7 : 5, placed.color);
+    state.message = placed.rainbow ? "Rainbow boost" : perfect ? "Perfect +" + state.combo : "Nice";
+    state.messageT = placed.rainbow ? 1.05 : 0.75;
+    state.bump = placed.rainbow ? 34 : perfect ? 22 : 10;
+    state.shake = Math.max(state.shake, placed.rainbow ? 9 : perfect ? 5 : 2);
+    burst(placed.x + placed.w / 2, placed.y + slabH / 2, placed.rainbow ? 22 : perfect ? state.combo + 7 : 5, placed.rainbow ? null : placed.color);
+    if (placed.rainbow) {
+      state.rings.push({ x: placed.x + placed.w / 2, y: placed.y + slabH / 2, r: 30, life: 0.55 });
+    }
     spawnSlab();
     saveBest();
     syncHud();
-    playSound(perfect ? "perfect" : "drop");
+    playSound(placed.rainbow ? "rainbow" : perfect ? "perfect" : "drop");
   }
 
-  function makeChip(x, y, w, color, dir) {
+  function widenTower(amount) {
+    state.stack.forEach((slab) => {
+      const center = slab.x + slab.w / 2;
+      slab.w = Math.min(720, slab.w + amount);
+      slab.x = clamp(center - slab.w / 2, 24, W - slab.w - 24);
+    });
+  }
+
+  function makeChip(x, y, w, color, dir, rainbow) {
     return {
       x,
       y,
       w,
       h: slabH,
       color,
+      rainbow,
       vx: dir * (80 + Math.random() * 120),
       vy: -110,
       rot: 0,
@@ -222,7 +248,7 @@
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         life: 0.5 + Math.random() * 0.35,
-        color
+        color: color || rainbowColors[i % rainbowColors.length]
       });
     }
   }
@@ -261,6 +287,9 @@
   }
 
   function getGoalText() {
+    if (state.active && state.active.rainbow) return "Rainbow block";
+    const nextRainbow = 7 - (state.stack.length % 7);
+    if (nextRainbow > 0 && nextRainbow <= 2) return "Rainbow in " + nextRainbow;
     if (state.stack.length >= 25) return "Goal: 25 blocks cleared";
     if (state.perfectRun >= 3) return "Goal: 3 perfects cleared";
     if (state.stack.length >= 10) return "Goal: 10 blocks cleared";
@@ -313,6 +342,12 @@
       star.y += star.vy * dt;
     });
     state.stars = state.stars.filter((star) => star.life > 0);
+
+    state.rings.forEach((ring) => {
+      ring.life -= dt;
+      ring.r += 560 * dt;
+    });
+    state.rings = state.rings.filter((ring) => ring.life > 0);
   }
 
   function draw() {
@@ -328,6 +363,7 @@
     if (state.active) drawSlab(state.active);
     state.chips.forEach(drawChip);
     state.stars.forEach(drawStar);
+    state.rings.forEach(drawRing);
 
     ctx.restore();
     drawGuide();
@@ -371,11 +407,7 @@
     ctx.shadowBlur = 16;
     ctx.shadowOffsetY = 10;
     roundRect(slab.x, y, slab.w, slabH, 8);
-    const grad = ctx.createLinearGradient(slab.x, y, slab.x, y + slabH);
-    grad.addColorStop(0, lighten(slab.color, 0.18));
-    grad.addColorStop(0.42, slab.color);
-    grad.addColorStop(1, slab.color);
-    ctx.fillStyle = grad;
+    ctx.fillStyle = slab.rainbow ? makeRainbowGradient(slab.x, slab.w) : makeSlabGradient(slab);
     ctx.fill();
     ctx.shadowColor = "transparent";
     ctx.strokeStyle = "rgba(255,255,255,0.24)";
@@ -394,6 +426,22 @@
     ctx.restore();
   }
 
+  function makeSlabGradient(slab) {
+    const grad = ctx.createLinearGradient(slab.x, slab.y, slab.x, slab.y + slabH);
+    grad.addColorStop(0, lighten(slab.color, 0.18));
+    grad.addColorStop(0.42, slab.color);
+    grad.addColorStop(1, slab.color);
+    return grad;
+  }
+
+  function makeRainbowGradient(x, w) {
+    const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+    rainbowColors.forEach((color, index) => {
+      grad.addColorStop(index / (rainbowColors.length - 1), color);
+    });
+    return grad;
+  }
+
   function playSound(type) {
     if (muted) return;
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -409,10 +457,11 @@
       drop: [260, 190, 0.055],
       perfect: [520, 780, 0.09],
       wall: [140, 110, 0.035],
-      fail: [150, 70, 0.18]
+      fail: [150, 70, 0.18],
+      rainbow: [330, 990, 0.16]
     }[type] || [240, 180, 0.05];
 
-    osc.type = type === "perfect" ? "triangle" : "square";
+    osc.type = type === "perfect" || type === "rainbow" ? "triangle" : "square";
     osc.frequency.setValueAtTime(tone[0], now);
     osc.frequency.exponentialRampToValueAtTime(Math.max(40, tone[1]), now + tone[2]);
     gain.gain.setValueAtTime(0.0001, now);
@@ -431,7 +480,7 @@
     ctx.shadowBlur = 12;
     ctx.shadowOffsetY = 8;
     roundRect(-chip.w / 2, -chip.h / 2, chip.w, chip.h, 8);
-    ctx.fillStyle = chip.color;
+    ctx.fillStyle = chip.rainbow ? makeRainbowGradient(-chip.w / 2, chip.w) : chip.color;
     ctx.fill();
     ctx.restore();
   }
@@ -443,6 +492,17 @@
     ctx.arc(star.x, star.y, 7, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
+  }
+
+  function drawRing(ring) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, ring.life * 1.8);
+    ctx.strokeStyle = "#fff8e8";
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
 
   function drawGuide() {
