@@ -16,6 +16,7 @@ Open `index.html` in a browser. Press Space, Enter, ArrowDown, or tap/click the 
 - Persistent missions, run rewards, and coins
 - Sound effects with mute persistence
 - Keyboard, pointer, and touch-friendly controls
+- iPhone/iPad portrait and landscape layout support
 - Local high score through `localStorage`
 - Static HTML/CSS/JS with no build step
 - Poki SDK hook points for loading, gameplay, pause, game-over, and replay breaks

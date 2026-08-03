@@ -42,6 +42,7 @@
   let pokiReady = false;
   let gameplayActive = false;
   let audioSuspendedForAd = false;
+  let lastTapDrop = 0;
 
   function initPoki() {
     const sdk = getPoki();
@@ -224,6 +225,7 @@
   }
 
   function drop() {
+    unlockAudio();
     if (!state.running) {
       requestStart(state.over);
       return;
@@ -622,6 +624,14 @@
     osc.stop(now + tone[2] + 0.01);
   }
 
+  function unlockAudio() {
+    if (muted || audioCtx) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    audioCtx = new AudioContext();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  }
+
   function drawChip(chip) {
     ctx.save();
     ctx.translate(chip.x + chip.w / 2, chip.y + chip.h / 2);
@@ -730,6 +740,9 @@
   }
 
   window.addEventListener("resize", resize);
+  window.addEventListener("orientationchange", () => {
+    setTimeout(resize, 250);
+  });
   window.addEventListener("keydown", (event) => {
     if (event.repeat) return;
     if (event.code === "Space" || event.code === "ArrowDown" || event.code === "ArrowUp" || event.code === "Enter") {
@@ -742,12 +755,27 @@
     }
   });
   window.addEventListener("wheel", (event) => event.preventDefault(), { passive: false });
+  window.addEventListener("touchmove", (event) => event.preventDefault(), { passive: false });
 
-  canvas.addEventListener("pointerdown", drop);
+  function handleTapDrop(event) {
+    event.preventDefault();
+    const now = performance.now();
+    if (now - lastTapDrop < 140) return;
+    lastTapDrop = now;
+    drop();
+  }
+
+  canvas.addEventListener("pointerdown", handleTapDrop);
+  if (!window.PointerEvent) {
+    canvas.addEventListener("touchstart", handleTapDrop, { passive: false });
+  }
   playBtn.addEventListener("click", () => {
     requestStart(true);
   });
-  dropBtn.addEventListener("click", drop);
+  dropBtn.addEventListener("pointerdown", handleTapDrop);
+  if (!window.PointerEvent) {
+    dropBtn.addEventListener("touchstart", handleTapDrop, { passive: false });
+  }
   pauseBtn.addEventListener("click", togglePause);
   muteBtn.addEventListener("click", () => {
     muted = !muted;
