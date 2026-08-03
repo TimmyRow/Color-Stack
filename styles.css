@@ -188,6 +188,7 @@ h1 {
 .goal {
   position: absolute;
   z-index: 2;
+  pointer-events: none;
   top: 12px;
   left: 12px;
   margin: 0;
@@ -208,6 +209,7 @@ h1 {
 .wallet {
   position: absolute;
   z-index: 2;
+  pointer-events: none;
   top: 12px;
   right: 12px;
   margin: 0;

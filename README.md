@@ -33,6 +33,10 @@ Open `index.html` in a browser. Press Space, Enter, ArrowDown, or tap/click the 
 - Prevents game-key and wheel page scrolling for embedded review pages.
 - Does not call Poki account, token, or cloud-save APIs; progress stays on the player's device.
 
+## Testing
+
+Run `npm run playtest` to launch automated Playwright checks for desktop, iPhone, and iPad layouts, touch drops, Poki lifecycle hooks, shop persistence, and localStorage-unavailable fallback behavior.
+
 ## Remaining Poki Prep
 
 - Create final static and animated thumbnails.

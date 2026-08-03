@@ -1,0 +1,12 @@
+{
+  "name": "color-stack",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "playtest": "node tests/playtest.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1"
+  }
+}
