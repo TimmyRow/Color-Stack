@@ -187,6 +187,26 @@ h1 {
   background: rgba(9, 11, 16, 0.58);
   color: var(--ink);
   padding: 8px 10px;
+  max-width: calc(100% - 118px);
+  overflow: hidden;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.wallet {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 12px;
+  margin: 0;
+  border: 1px solid rgba(247, 200, 91, 0.24);
+  border-radius: 8px;
+  background: rgba(9, 11, 16, 0.62);
+  color: var(--gold);
+  padding: 8px 10px;
   font-size: 0.76rem;
   font-weight: 900;
   text-transform: uppercase;
@@ -358,6 +378,12 @@ canvas {
   .goal {
     top: 8px;
     left: 8px;
+    padding: 6px 8px;
+  }
+
+  .wallet {
+    top: 8px;
+    right: 8px;
     padding: 6px 8px;
   }
 }

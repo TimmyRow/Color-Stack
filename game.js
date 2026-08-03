@@ -6,6 +6,7 @@
   const heightEl = document.getElementById("height");
   const comboEl = document.getElementById("combo");
   const goalEl = document.getElementById("goal");
+  const walletEl = document.getElementById("wallet");
   const curtain = document.getElementById("curtain");
   const playBtn = document.getElementById("play");
   const dropBtn = document.getElementById("drop");
@@ -18,9 +19,19 @@
   const slabH = 58;
   const bestKey = "color-stack-best";
   const bestHeightKey = "color-stack-best-height";
+  const coinsKey = "color-stack-coins";
+  const missionKey = "color-stack-mission";
+  const runsKey = "color-stack-runs";
   const muteKey = "color-stack-muted";
   const colors = ["#f7c85b", "#8b5cf6", "#22c55e", "#ef4444"];
   const rainbowColors = ["#f7c85b", "#8b5cf6", "#ef4444", "#22c55e"];
+  const missions = [
+    { text: "Reach 8 blocks", reward: 12, test: () => state.stack.length >= 8 },
+    { text: "Land 3 perfects", reward: 16, test: () => state.perfectRun >= 3 },
+    { text: "Score 150", reward: 18, test: () => state.score >= 150 },
+    { text: "Land a rainbow", reward: 20, test: () => state.rainbowLanded },
+    { text: "Reach 15 blocks", reward: 26, test: () => state.stack.length >= 15 }
+  ];
 
   let state;
   let rafId = 0;
@@ -63,6 +74,12 @@
       score: 0,
       combo: 1,
       perfectRun: 0,
+      rainbowLanded: false,
+      missionDone: false,
+      runCoins: 0,
+      coins: Number(localStorage.getItem(coinsKey) || 0),
+      missionIndex: Number(localStorage.getItem(missionKey) || 0) % missions.length,
+      runs: Number(localStorage.getItem(runsKey) || 0),
       best: Number(localStorage.getItem(bestKey) || localStorage.getItem("stack-snap-best") || 0),
       bestHeight: Number(localStorage.getItem(bestHeightKey) || 1),
       speed: 255,
@@ -147,16 +164,20 @@
   function gameOver() {
     state.running = false;
     state.over = true;
+    awardRunCoins();
+    state.runs += 1;
+    localStorage.setItem(runsKey, String(state.runs));
     state.shake = 18;
     state.message = "Off the edge";
     state.messageT = 2;
     curtain.classList.remove("hidden");
     curtain.querySelector(".label").textContent = "Final score " + state.score;
     curtain.querySelector("h2").textContent = "Try Again";
-    curtain.querySelector("p:not(.label)").textContent = "Final tower: " + state.stack.length + " blocks. One more run?";
+    curtain.querySelector("p:not(.label)").textContent = "Final tower: " + state.stack.length + " blocks. Earned " + state.runCoins + " coins. Run " + state.runs + ".";
     playBtn.textContent = "Restart";
     playSound("fail");
     stopGameplay();
+    syncHud();
   }
 
   function drop() {
@@ -209,6 +230,7 @@
     state.score += gained;
     state.combo = perfect ? Math.min(9, state.combo + 1) : 1;
     state.perfectRun = perfect ? state.perfectRun + 1 : 0;
+    if (placed.rainbow) state.rainbowLanded = true;
     state.speed = Math.min(640, state.speed + 11 + state.combo * 1.5);
     state.message = placed.rainbow ? "Rainbow boost" : perfect ? "Perfect +" + state.combo : "Nice";
     state.messageT = placed.rainbow ? 1.05 : 0.75;
@@ -220,6 +242,7 @@
       state.rings.push({ x: placed.x + placed.w / 2, y: placed.y + slabH / 2, r: 30, life: 0.55 });
     }
     spawnSlab();
+    checkMission();
     saveBest();
     syncHud();
     playSound(placed.rainbow ? "rainbow" : perfect ? "perfect" : "drop");
@@ -319,22 +342,46 @@
     }
   }
 
+  function awardRunCoins() {
+    const base = Math.floor(state.score / 75) + Math.floor(state.stack.length / 5);
+    if (base <= 0) return;
+    addCoins(base);
+  }
+
+  function addCoins(amount) {
+    state.runCoins += amount;
+    state.coins += amount;
+    localStorage.setItem(coinsKey, String(state.coins));
+    floatScore(W - 168, state.active ? state.active.y - 18 : H - 220, "+" + amount + " coins", "#f7c85b");
+  }
+
+  function checkMission() {
+    if (state.missionDone) return;
+    const mission = missions[state.missionIndex];
+    if (!mission.test()) return;
+    state.missionDone = true;
+    addCoins(mission.reward);
+    state.message = "Mission complete";
+    state.messageT = 1.15;
+    playSound("mission");
+    state.missionIndex = (state.missionIndex + 1) % missions.length;
+    localStorage.setItem(missionKey, String(state.missionIndex));
+  }
+
   function syncHud() {
     scoreEl.textContent = state.score;
     bestEl.textContent = state.best;
     heightEl.textContent = state.stack.length + "/" + Math.max(state.bestHeight, state.stack.length);
     comboEl.textContent = "x" + state.combo;
     goalEl.textContent = getGoalText();
+    walletEl.textContent = state.coins + " coins";
   }
 
   function getGoalText() {
     if (state.active && state.active.rainbow) return "Rainbow block";
-    if (state.rainbowCooldown === 0 && state.stack.length >= 4) return "Rainbow ready";
-    if (state.stack.length >= 25) return "Goal: 25 blocks cleared";
-    if (state.perfectRun >= 3) return "Goal: 3 perfects cleared";
-    if (state.stack.length >= 10) return "Goal: 10 blocks cleared";
-    if (state.stack.length >= 7) return "Goal: 3 perfect drops";
-    return "Goal: 10 blocks";
+    if (state.missionDone) return "Mission complete";
+    const mission = missions[state.missionIndex];
+    return "Mission: " + mission.text + " +" + mission.reward;
   }
 
   function syncMute() {
@@ -517,10 +564,11 @@
       perfect: [520, 780, 0.09],
       wall: [140, 110, 0.035],
       fail: [150, 70, 0.18],
-      rainbow: [330, 990, 0.16]
+      rainbow: [330, 990, 0.16],
+      mission: [440, 880, 0.13]
     }[type] || [240, 180, 0.05];
 
-    osc.type = type === "perfect" || type === "rainbow" ? "triangle" : "square";
+    osc.type = type === "perfect" || type === "rainbow" || type === "mission" ? "triangle" : "square";
     osc.frequency.setValueAtTime(tone[0], now);
     osc.frequency.exponentialRampToValueAtTime(Math.max(40, tone[1]), now + tone[2]);
     gain.gain.setValueAtTime(0.0001, now);

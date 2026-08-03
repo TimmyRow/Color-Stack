@@ -13,6 +13,7 @@ Open `index.html` in a browser. Press Space, Enter, ArrowDown, or tap/click the 
 - Random rainbow blocks widen the whole tower when landed
 - Perfect-drop combo scoring
 - Height goals and best tower tracking
+- Persistent missions, run rewards, and coins
 - Sound effects with mute persistence
 - Keyboard, pointer, and touch-friendly controls
 - Local high score through `localStorage`
