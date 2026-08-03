@@ -301,7 +301,7 @@ canvas {
 
 .controls {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) auto auto auto;
+  grid-template-columns: minmax(120px, 1fr) auto auto auto auto;
   gap: 10px;
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -310,6 +310,123 @@ canvas {
 #play {
   background: linear-gradient(180deg, #ffe28a, var(--gold));
   color: #191816;
+}
+
+.shop-panel {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: rgba(7, 9, 14, 0.76);
+  backdrop-filter: blur(8px);
+}
+
+.shop-panel.hidden {
+  display: none;
+}
+
+.shop-card {
+  width: min(820px, 100%);
+  max-height: min(780px, calc(100dvh - 28px));
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #11151f;
+  box-shadow: 0 28px 80px var(--shadow);
+  padding: 18px;
+  touch-action: pan-y;
+}
+
+.shop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shop-head h2,
+.shop-card h3 {
+  margin-bottom: 0;
+}
+
+.shop-card h3 {
+  margin-top: 18px;
+  color: var(--ink);
+  font-size: 1rem;
+  text-transform: uppercase;
+}
+
+.shop-coins {
+  display: inline-block;
+  margin: 8px 0 0;
+  border: 1px solid rgba(247, 200, 91, 0.24);
+  border-radius: 8px;
+  background: rgba(247, 200, 91, 0.1);
+  color: var(--gold);
+  padding: 8px 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.shop-item {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  min-height: 146px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #181d2a;
+  padding: 10px;
+  text-align: left;
+}
+
+.shop-item.selected {
+  border-color: rgba(247, 200, 91, 0.86);
+  box-shadow: inset 0 0 0 1px rgba(247, 200, 91, 0.45);
+}
+
+.shop-preview {
+  height: 48px;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 248, 232, 0.12);
+}
+
+.block-preview {
+  display: grid;
+  gap: 4px;
+  padding: 7px;
+  background: #0d1017;
+}
+
+.block-preview i {
+  display: block;
+  height: 7px;
+  border-radius: 3px;
+}
+
+.shop-item b {
+  font-size: 0.95rem;
+}
+
+.shop-item small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.shop-item button {
+  min-height: 38px;
+  justify-self: stretch;
+  box-shadow: none;
 }
 
 @media (max-width: 720px) {
@@ -342,7 +459,7 @@ canvas {
   }
 
   .controls {
-    grid-template-columns: 1fr 0.62fr 0.68fr 0.74fr;
+    grid-template-columns: 1fr repeat(4, 0.66fr);
   }
 
   button {
@@ -374,12 +491,16 @@ canvas {
   }
 
   .controls {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 
   #drop {
     grid-column: 1 / -1;
     min-height: 68px;
+  }
+
+  .shop-card {
+    padding: 14px;
   }
 }
 
@@ -393,7 +514,7 @@ canvas {
   }
 
   .controls {
-    grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(110px, auto));
+    grid-template-columns: minmax(220px, 1fr) repeat(4, minmax(96px, auto));
   }
 }
 
@@ -434,7 +555,7 @@ canvas {
   }
 
   .controls {
-    grid-template-columns: minmax(180px, 1fr) repeat(3, auto);
+    grid-template-columns: minmax(180px, 1fr) repeat(4, auto);
   }
 
   .goal {

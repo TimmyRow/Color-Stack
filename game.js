@@ -10,9 +10,15 @@
   const curtain = document.getElementById("curtain");
   const playBtn = document.getElementById("play");
   const dropBtn = document.getElementById("drop");
+  const shopBtn = document.getElementById("shop");
   const pauseBtn = document.getElementById("pause");
   const muteBtn = document.getElementById("mute");
   const restartBtn = document.getElementById("restart");
+  const shopPanel = document.getElementById("shopPanel");
+  const shopCloseBtn = document.getElementById("shopClose");
+  const shopCoinsEl = document.getElementById("shopCoins");
+  const backgroundShopEl = document.getElementById("backgroundShop");
+  const blockShopEl = document.getElementById("blockShop");
 
   const W = 900;
   const H = 1200;
@@ -23,8 +29,24 @@
   const missionKey = "color-stack-mission";
   const runsKey = "color-stack-runs";
   const muteKey = "color-stack-muted";
-  const colors = ["#f7c85b", "#8b5cf6", "#22c55e", "#ef4444"];
+  const backgroundKey = "color-stack-background";
+  const blockThemeKey = "color-stack-block-theme";
+  const ownedBackgroundsKey = "color-stack-owned-backgrounds";
+  const ownedBlocksKey = "color-stack-owned-blocks";
+  const defaultColors = ["#f7c85b", "#8b5cf6", "#22c55e", "#ef4444"];
   const rainbowColors = ["#f7c85b", "#8b5cf6", "#ef4444", "#22c55e"];
+  const backgrounds = [
+    { id: "grid", name: "Arcade Grid", cost: 0, colors: ["#202431", "#141720", "#090b10"], rails: ["#f7c85b", "#8b5cf6"], preview: "linear-gradient(135deg, #202431, #090b10)" },
+    { id: "sunset", name: "Sunset Pop", cost: 35, colors: ["#382244", "#21162c", "#140c18"], rails: ["#ef4444", "#f7c85b"], preview: "linear-gradient(135deg, #ef4444, #8b5cf6 58%, #140c18)" },
+    { id: "mint", name: "Mint Circuit", cost: 45, colors: ["#12322d", "#0d221f", "#071210"], rails: ["#22c55e", "#f7c85b"], preview: "linear-gradient(135deg, #22c55e, #12322d 52%, #071210)" },
+    { id: "royal", name: "Royal Night", cost: 60, colors: ["#201747", "#15102d", "#090815"], rails: ["#8b5cf6", "#ef4444"], preview: "linear-gradient(135deg, #8b5cf6, #201747 54%, #090815)" }
+  ];
+  const blockThemes = [
+    { id: "classic", name: "Classic Stack", cost: 0, colors: defaultColors },
+    { id: "candy", name: "Candy Blocks", cost: 40, colors: ["#f9a8d4", "#93c5fd", "#fdba74", "#86efac"] },
+    { id: "neon", name: "Neon Blocks", cost: 55, colors: ["#a3e635", "#06b6d4", "#f43f5e", "#c084fc"] },
+    { id: "ember", name: "Ember Blocks", cost: 65, colors: ["#facc15", "#fb7185", "#f97316", "#84cc16"] }
+  ];
   const missions = [
     { text: "Reach 8 blocks", reward: 12, test: () => state.stack.length >= 8 },
     { text: "Land 3 perfects", reward: 16, test: () => state.perfectRun >= 3 },
@@ -43,6 +65,9 @@
   let gameplayActive = false;
   let audioSuspendedForAd = false;
   let lastTapDrop = 0;
+  let activeBackground = getItem(backgrounds, localStorage.getItem(backgroundKey) || "grid");
+  let activeBlockTheme = getItem(blockThemes, localStorage.getItem(blockThemeKey) || "classic");
+  let colors = activeBlockTheme.colors;
 
   function initPoki() {
     const sdk = getPoki();
@@ -124,6 +149,7 @@
     syncHud();
     pauseBtn.textContent = "Pause";
     syncMute();
+    renderShop();
   }
 
   function spawnSlab() {
@@ -419,6 +445,97 @@
     comboEl.textContent = "x" + state.combo;
     goalEl.textContent = getGoalText();
     walletEl.textContent = state.coins + " coins";
+    shopCoinsEl.textContent = state.coins + " coins";
+  }
+
+  function getItem(items, id) {
+    return items.find((item) => item.id === id) || items[0];
+  }
+
+  function getOwned(key, fallback) {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(key) || "[]");
+      return new Set([fallback, ...parsed]);
+    } catch (error) {
+      return new Set([fallback]);
+    }
+  }
+
+  function saveOwned(key, owned) {
+    localStorage.setItem(key, JSON.stringify([...owned]));
+  }
+
+  function renderShop() {
+    if (!state) return;
+    renderShopGroup(backgroundShopEl, backgrounds, ownedBackgroundsKey, activeBackground.id, "background");
+    renderShopGroup(blockShopEl, blockThemes, ownedBlocksKey, activeBlockTheme.id, "blocks");
+    shopCoinsEl.textContent = state.coins + " coins";
+  }
+
+  function renderShopGroup(root, items, ownedKey, activeId, type) {
+    const owned = getOwned(ownedKey, items[0].id);
+    root.innerHTML = "";
+    items.forEach((item) => {
+      const itemEl = document.createElement("article");
+      itemEl.className = "shop-item" + (item.id === activeId ? " selected" : "");
+      const preview = document.createElement("div");
+      preview.className = type === "blocks" ? "shop-preview block-preview" : "shop-preview";
+      if (type === "blocks") {
+        item.colors.forEach((color) => {
+          const swatch = document.createElement("i");
+          swatch.style.background = color;
+          preview.appendChild(swatch);
+        });
+      } else {
+        preview.style.background = item.preview;
+      }
+      const name = document.createElement("b");
+      name.textContent = item.name;
+      const cost = document.createElement("small");
+      cost.textContent = owned.has(item.id) ? "Owned" : item.cost + " coins";
+      const action = document.createElement("button");
+      action.type = "button";
+      action.textContent = item.id === activeId ? "Selected" : owned.has(item.id) ? "Select" : "Buy";
+      action.disabled = item.id === activeId || (!owned.has(item.id) && state.coins < item.cost);
+      action.addEventListener("click", () => buyOrSelectItem(item, type, owned, ownedKey));
+      itemEl.append(preview, name, cost, action);
+      root.appendChild(itemEl);
+    });
+  }
+
+  function buyOrSelectItem(item, type, owned, ownedKey) {
+    if (!owned.has(item.id)) {
+      if (state.coins < item.cost) return;
+      state.coins -= item.cost;
+      localStorage.setItem(coinsKey, String(state.coins));
+      owned.add(item.id);
+      saveOwned(ownedKey, owned);
+      floatScore(W / 2, state.active ? state.active.y - 28 : H - 260, "-" + item.cost + " coins", "#f7c85b");
+    }
+
+    if (type === "blocks") {
+      activeBlockTheme = item;
+      colors = item.colors;
+      localStorage.setItem(blockThemeKey, item.id);
+    } else {
+      activeBackground = item;
+      localStorage.setItem(backgroundKey, item.id);
+    }
+    syncHud();
+    renderShop();
+    playSound("mission");
+  }
+
+  function openShop() {
+    shopPanel.classList.remove("hidden");
+    if (state.running && !state.paused && !state.over) {
+      togglePause();
+    }
+    renderShop();
+  }
+
+  function closeShop() {
+    shopPanel.classList.add("hidden");
   }
 
   function getGoalText() {
@@ -516,9 +633,9 @@
 
   function drawBackdrop() {
     const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, "#202431");
-    grad.addColorStop(0.56, "#141720");
-    grad.addColorStop(1, "#090b10");
+    grad.addColorStop(0, activeBackground.colors[0]);
+    grad.addColorStop(0.56, activeBackground.colors[1]);
+    grad.addColorStop(1, activeBackground.colors[2]);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
@@ -527,9 +644,9 @@
       ctx.fillRect(x, 0, 2, H);
     }
 
-    ctx.fillStyle = "rgba(247, 200, 91, 0.08)";
+    ctx.fillStyle = hexToRgba(activeBackground.rails[0], 0.11);
     ctx.fillRect(118, 0, state.wallFlash ? 11 : 5, H);
-    ctx.fillStyle = "rgba(139, 92, 246, 0.08)";
+    ctx.fillStyle = hexToRgba(activeBackground.rails[1], 0.11);
     ctx.fillRect(W - 123, 0, state.wallFlash ? 11 : 5, H);
 
     ctx.globalAlpha = 0.2;
@@ -720,6 +837,11 @@
     return "rgb(" + r + "," + g + "," + b + ")";
   }
 
+  function hexToRgba(hex, alpha) {
+    const n = parseInt(hex.slice(1), 16);
+    return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + alpha + ")";
+  }
+
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
   }
@@ -755,7 +877,10 @@
     }
   });
   window.addEventListener("wheel", (event) => event.preventDefault(), { passive: false });
-  window.addEventListener("touchmove", (event) => event.preventDefault(), { passive: false });
+  window.addEventListener("touchmove", (event) => {
+    if (event.target.closest(".shop-card")) return;
+    event.preventDefault();
+  }, { passive: false });
 
   function handleTapDrop(event) {
     event.preventDefault();
@@ -776,6 +901,11 @@
   if (!window.PointerEvent) {
     dropBtn.addEventListener("touchstart", handleTapDrop, { passive: false });
   }
+  shopBtn.addEventListener("click", openShop);
+  shopCloseBtn.addEventListener("click", closeShop);
+  shopPanel.addEventListener("click", (event) => {
+    if (event.target === shopPanel) closeShop();
+  });
   pauseBtn.addEventListener("click", togglePause);
   muteBtn.addEventListener("click", () => {
     muted = !muted;

@@ -46,10 +46,28 @@
 
     <nav class="controls" aria-label="Game controls">
       <button id="drop" class="primary" type="button" aria-label="Drop block">Tap to Drop</button>
+      <button id="shop" type="button">Shop</button>
       <button id="pause" type="button">Pause</button>
       <button id="mute" type="button" aria-pressed="false">Sound</button>
       <button id="restart" type="button">Restart</button>
     </nav>
+
+    <section id="shopPanel" class="shop-panel hidden" aria-modal="true" role="dialog" aria-labelledby="shopTitle">
+      <div class="shop-card">
+        <div class="shop-head">
+          <div>
+            <p class="label">Spend coins</p>
+            <h2 id="shopTitle">Shop</h2>
+          </div>
+          <button id="shopClose" type="button" aria-label="Close shop">Close</button>
+        </div>
+        <p id="shopCoins" class="shop-coins">0 coins</p>
+        <h3>Backgrounds</h3>
+        <div id="backgroundShop" class="shop-grid"></div>
+        <h3>Block Colors</h3>
+        <div id="blockShop" class="shop-grid"></div>
+      </div>
+    </section>
   </main>
 
   <script src="game.js"></script>

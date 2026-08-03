@@ -14,6 +14,7 @@ Open `index.html` in a browser. Press Space, Enter, ArrowDown, or tap/click the 
 - Perfect-drop combo scoring
 - Height goals and best tower tracking
 - Persistent missions, run rewards, and coins
+- Coin shop with unlockable backgrounds and block color sets
 - Sound effects with mute persistence
 - Keyboard, pointer, and touch-friendly controls
 - iPhone/iPad portrait and landscape layout support
