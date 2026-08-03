@@ -143,7 +143,7 @@
 
   function shouldSpawnRainbow() {
     if (state.stack.length < 4 || state.rainbowCooldown > 0) return false;
-    const chance = Math.min(0.3, 0.12 + state.stack.length * 0.006);
+    const chance = Math.min(0.16, 0.055 + state.stack.length * 0.003);
     return Math.random() < chance;
   }
 
@@ -265,7 +265,7 @@
     state.stack.push(placed);
     if (placed.rainbow) {
       widenTower(56);
-      state.rainbowCooldown = 4;
+      state.rainbowCooldown = 7;
     } else {
       state.rainbowCooldown = Math.max(0, state.rainbowCooldown - 1);
     }
