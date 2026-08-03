@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#12141f">
+  <title>Stack Snap</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="topbar" aria-label="Game status">
+      <div>
+        <p class="label">Stack Snap</p>
+        <h1>Drop clean. Climb fast.</h1>
+      </div>
+      <div class="stats" aria-live="polite">
+        <span><b id="score">0</b> score</span>
+        <span><b id="best">0</b> best</span>
+        <span><b id="combo">x1</b> combo</span>
+      </div>
+    </section>
+
+    <section class="stage-wrap">
+      <canvas id="game" width="900" height="1200" aria-label="Stack Snap stacking game"></canvas>
+      <div id="curtain" class="curtain">
+        <div class="mark" aria-hidden="true"></div>
+        <p class="label">Quick arcade prototype</p>
+        <h2>Stack Snap</h2>
+        <p>Tap when the moving slab lines up. Tiny misses shrink the next slab. Perfect drops build combo, speed, and a taller tower.</p>
+        <button id="play" type="button">Play</button>
+      </div>
+    </section>
+
+    <nav class="controls" aria-label="Game controls">
+      <button id="drop" class="primary" type="button">Drop</button>
+      <button id="pause" type="button">Pause</button>
+      <button id="restart" type="button">Restart</button>
+    </nav>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
