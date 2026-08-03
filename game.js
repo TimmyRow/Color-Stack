@@ -3,23 +3,41 @@
   const ctx = canvas.getContext("2d");
   const scoreEl = document.getElementById("score");
   const bestEl = document.getElementById("best");
+  const heightEl = document.getElementById("height");
   const comboEl = document.getElementById("combo");
+  const goalEl = document.getElementById("goal");
   const curtain = document.getElementById("curtain");
   const playBtn = document.getElementById("play");
   const dropBtn = document.getElementById("drop");
   const pauseBtn = document.getElementById("pause");
+  const muteBtn = document.getElementById("mute");
   const restartBtn = document.getElementById("restart");
 
   const W = 900;
   const H = 1200;
   const slabH = 58;
-  const bestKey = "stack-snap-best";
+  const bestKey = "color-stack-best";
+  const bestHeightKey = "color-stack-best-height";
+  const muteKey = "color-stack-muted";
   const colors = ["#f7c85b", "#8b5cf6", "#22c55e", "#ef4444"];
-  const poki = window.PokiSDK || null;
 
   let state;
   let rafId = 0;
   let last = 0;
+  let audioCtx = null;
+  let muted = localStorage.getItem(muteKey) === "1";
+  let adLocked = false;
+
+  function initPoki() {
+    const sdk = window.PokiSDK;
+    if (!sdk) return;
+    sdk.init()
+      .catch(() => undefined)
+      .then(() => {
+        if (sdk.gameLoadingFinished) sdk.gameLoadingFinished();
+        if (sdk.movePill) sdk.movePill(0, 18);
+      });
+  }
 
   function reset() {
     const base = {
@@ -31,9 +49,9 @@
       settled: true
     };
 
-    curtain.querySelector(".label").textContent = "Quick arcade prototype";
+    curtain.querySelector(".label").textContent = "Color Stack";
     curtain.querySelector("h2").textContent = "Color Stack";
-    curtain.querySelector("p:not(.label)").textContent = "Tap when the moving slab lines up. Edge catches still count, but a block that falls completely off the stack ends the run.";
+    curtain.querySelector("p:not(.label)").textContent = "Stack the colors higher with clean drops and brave edge catches.";
     playBtn.textContent = "Play";
 
     state = {
@@ -42,10 +60,14 @@
       over: false,
       score: 0,
       combo: 1,
-      best: Number(localStorage.getItem(bestKey) || 0),
+      perfectRun: 0,
+      best: Number(localStorage.getItem(bestKey) || localStorage.getItem("stack-snap-best") || 0),
+      bestHeight: Number(localStorage.getItem(bestHeightKey) || 1),
       speed: 255,
       cameraY: 0,
       shake: 0,
+      bump: 0,
+      wallFlash: 0,
       message: "Tap to drop",
       messageT: 1.8,
       stack: [base],
@@ -57,6 +79,7 @@
     spawnSlab();
     syncHud();
     pauseBtn.textContent = "Pause";
+    syncMute();
   }
 
   function spawnSlab() {
@@ -72,13 +95,39 @@
     };
   }
 
+  function requestStart(resetFirst) {
+    if (adLocked) return;
+    if (resetFirst) reset();
+    const sdk = window.PokiSDK;
+    if (!sdk || !sdk.commercialBreak) {
+      start();
+      return;
+    }
+
+    adLocked = true;
+    if (state.running && !state.paused) stopGameplay();
+    sdk.commercialBreak(() => {
+      adLocked = true;
+    }).catch(() => undefined).then(() => {
+      adLocked = false;
+      start();
+    });
+  }
+
   function start() {
-    if (poki && poki.gameplayStart) poki.gameplayStart();
+    const sdk = window.PokiSDK;
+    if (sdk && sdk.gameplayStart) sdk.gameplayStart();
     state.running = true;
     state.paused = false;
     state.over = false;
     curtain.classList.add("hidden");
     last = performance.now();
+    playSound("start");
+  }
+
+  function stopGameplay() {
+    const sdk = window.PokiSDK;
+    if (sdk && sdk.gameplayStop) sdk.gameplayStop();
   }
 
   function gameOver() {
@@ -90,17 +139,18 @@
     curtain.classList.remove("hidden");
     curtain.querySelector(".label").textContent = "Final score " + state.score;
     curtain.querySelector("h2").textContent = "Try Again";
-    curtain.querySelector("p:not(.label)").textContent = "You only lose when a block misses the stack completely. Catch even a tiny edge to keep climbing.";
+    curtain.querySelector("p:not(.label)").textContent = "Final tower: " + state.stack.length + " blocks. One more run?";
     playBtn.textContent = "Restart";
-    if (poki && poki.gameplayStop) poki.gameplayStop();
+    playSound("fail");
+    stopGameplay();
   }
 
   function drop() {
     if (!state.running) {
-      start();
+      requestStart(state.over);
       return;
     }
-    if (state.paused || state.over) return;
+    if (state.paused || state.over || adLocked) return;
 
     const active = state.active;
     const top = state.stack[state.stack.length - 1];
@@ -135,13 +185,17 @@
     state.stack.push(placed);
     state.score += perfect ? 10 * state.combo : 4 + Math.ceil(overlap / 34);
     state.combo = perfect ? Math.min(9, state.combo + 1) : 1;
+    state.perfectRun = perfect ? state.perfectRun + 1 : 0;
     state.speed = Math.min(640, state.speed + 11 + state.combo * 1.5);
     state.message = perfect ? "Perfect +" + state.combo : "Nice";
     state.messageT = 0.75;
+    state.bump = perfect ? 22 : 10;
+    state.shake = Math.max(state.shake, perfect ? 5 : 2);
     burst(placed.x + placed.w / 2, placed.y + slabH / 2, perfect ? state.combo + 7 : 5, placed.color);
     spawnSlab();
     saveBest();
     syncHud();
+    playSound(perfect ? "perfect" : "drop");
   }
 
   function makeChip(x, y, w, color, dir) {
@@ -179,6 +233,12 @@
     pauseBtn.textContent = state.paused ? "Resume" : "Pause";
     state.message = state.paused ? "Paused" : "Stack";
     state.messageT = 1;
+    if (state.paused) {
+      stopGameplay();
+    } else {
+      const sdk = window.PokiSDK;
+      if (sdk && sdk.gameplayStart) sdk.gameplayStart();
+    }
   }
 
   function saveBest() {
@@ -186,12 +246,31 @@
       state.best = state.score;
       localStorage.setItem(bestKey, String(state.best));
     }
+    if (state.stack.length > state.bestHeight) {
+      state.bestHeight = state.stack.length;
+      localStorage.setItem(bestHeightKey, String(state.bestHeight));
+    }
   }
 
   function syncHud() {
     scoreEl.textContent = state.score;
     bestEl.textContent = state.best;
+    heightEl.textContent = state.stack.length + "/" + Math.max(state.bestHeight, state.stack.length);
     comboEl.textContent = "x" + state.combo;
+    goalEl.textContent = getGoalText();
+  }
+
+  function getGoalText() {
+    if (state.stack.length >= 25) return "Goal: 25 blocks cleared";
+    if (state.perfectRun >= 3) return "Goal: 3 perfects cleared";
+    if (state.stack.length >= 10) return "Goal: 10 blocks cleared";
+    if (state.stack.length >= 7) return "Goal: 3 perfect drops";
+    return "Goal: 10 blocks";
+  }
+
+  function syncMute() {
+    muteBtn.textContent = muted ? "Muted" : "Sound";
+    muteBtn.setAttribute("aria-pressed", String(muted));
   }
 
   function update(dt) {
@@ -201,15 +280,21 @@
       if (active.x <= 0) {
         active.x = 0;
         active.dir = 1;
+        state.wallFlash = 0.18;
+        playSound("wall");
       }
       if (active.x + active.w >= W) {
         active.x = W - active.w;
         active.dir = -1;
+        state.wallFlash = 0.18;
+        playSound("wall");
       }
     }
 
     const targetCamera = Math.max(0, H - 380 - state.active.y);
-    state.cameraY += (targetCamera - state.cameraY) * Math.min(1, dt * 5.5);
+    state.cameraY += (targetCamera + state.bump - state.cameraY) * Math.min(1, dt * 5.5);
+    state.bump = Math.max(0, state.bump - dt * 80);
+    state.wallFlash = Math.max(0, state.wallFlash - dt);
     state.messageT = Math.max(0, state.messageT - dt);
     state.shake = Math.max(0, state.shake - dt * 38);
 
@@ -251,15 +336,25 @@
 
   function drawBackdrop() {
     const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, "#222a40");
-    grad.addColorStop(0.58, "#141824");
-    grad.addColorStop(1, "#0b0d13");
+    grad.addColorStop(0, "#202431");
+    grad.addColorStop(0.56, "#141720");
+    grad.addColorStop(1, "#090b10");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    ctx.globalAlpha = 0.18;
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 2;
+    ctx.fillStyle = "rgba(255, 248, 232, 0.035)";
+    for (let x = 90; x < W; x += 90) {
+      ctx.fillRect(x, 0, 2, H);
+    }
+
+    ctx.fillStyle = "rgba(247, 200, 91, 0.08)";
+    ctx.fillRect(118, 0, state.wallFlash ? 11 : 5, H);
+    ctx.fillStyle = "rgba(139, 92, 246, 0.08)";
+    ctx.fillRect(W - 123, 0, state.wallFlash ? 11 : 5, H);
+
+    ctx.globalAlpha = 0.2;
+    ctx.strokeStyle = "#fff8e8";
+    ctx.lineWidth = 1.5;
     for (let y = 120 - (state.cameraY % 120); y < H; y += 120) {
       ctx.beginPath();
       ctx.moveTo(0, y);
@@ -272,18 +367,25 @@
   function drawSlab(slab) {
     const y = slab.y;
     ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.34)";
+    ctx.shadowBlur = 16;
+    ctx.shadowOffsetY = 10;
     roundRect(slab.x, y, slab.w, slabH, 8);
     const grad = ctx.createLinearGradient(slab.x, y, slab.x, y + slabH);
-    grad.addColorStop(0, lighten(slab.color, 0.16));
+    grad.addColorStop(0, lighten(slab.color, 0.18));
+    grad.addColorStop(0.42, slab.color);
     grad.addColorStop(1, slab.color);
     ctx.fillStyle = grad;
     ctx.fill();
+    ctx.shadowColor = "transparent";
     ctx.strokeStyle = "rgba(255,255,255,0.24)";
     ctx.lineWidth = 3;
     ctx.stroke();
 
     ctx.fillStyle = "rgba(255,255,255,0.18)";
-    ctx.fillRect(slab.x + 16, y + 13, Math.max(0, slab.w - 32), 7);
+    ctx.fillRect(slab.x + 14, y + 12, Math.max(0, slab.w - 28), 6);
+    ctx.fillStyle = "rgba(0,0,0,0.17)";
+    ctx.fillRect(slab.x + 10, y + slabH - 12, Math.max(0, slab.w - 20), 5);
     if (slab.perfect) {
       ctx.strokeStyle = "#f7c85b";
       ctx.lineWidth = 4;
@@ -292,10 +394,42 @@
     ctx.restore();
   }
 
+  function playSound(type) {
+    if (muted) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    if (!audioCtx) audioCtx = new AudioContext();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const tone = {
+      start: [220, 330, 0.07],
+      drop: [260, 190, 0.055],
+      perfect: [520, 780, 0.09],
+      wall: [140, 110, 0.035],
+      fail: [150, 70, 0.18]
+    }[type] || [240, 180, 0.05];
+
+    osc.type = type === "perfect" ? "triangle" : "square";
+    osc.frequency.setValueAtTime(tone[0], now);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(40, tone[1]), now + tone[2]);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(type === "wall" ? 0.025 : 0.07, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + tone[2]);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + tone[2] + 0.01);
+  }
+
   function drawChip(chip) {
     ctx.save();
     ctx.translate(chip.x + chip.w / 2, chip.y + chip.h / 2);
     ctx.rotate(chip.rot);
+    ctx.shadowColor = "rgba(0,0,0,0.28)";
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 8;
     roundRect(-chip.w / 2, -chip.h / 2, chip.w, chip.h, 8);
     ctx.fillStyle = chip.color;
     ctx.fill();
@@ -315,9 +449,9 @@
     if (!state.running || state.over || state.paused) return;
     const top = state.stack[state.stack.length - 1];
     const screenY = top.y + state.cameraY;
-    ctx.strokeStyle = "rgba(247, 200, 91, 0.7)";
-    ctx.lineWidth = 3;
-    ctx.setLineDash([12, 12]);
+    ctx.strokeStyle = "rgba(247, 200, 91, 0.82)";
+    ctx.lineWidth = 4;
+    ctx.setLineDash([18, 12]);
     ctx.strokeRect(top.x, screenY - slabH, top.w, slabH);
     ctx.setLineDash([]);
   }
@@ -376,31 +510,36 @@
   window.addEventListener("resize", resize);
   window.addEventListener("keydown", (event) => {
     if (event.repeat) return;
-    if (event.code === "Space" || event.code === "ArrowDown" || event.code === "Enter") {
+    if (event.code === "Space" || event.code === "ArrowDown" || event.code === "ArrowUp" || event.code === "Enter") {
       event.preventDefault();
       drop();
     }
     if (event.code === "KeyP") togglePause();
     if (event.code === "KeyR") {
-      reset();
-      start();
+      requestStart(true);
     }
   });
+  window.addEventListener("wheel", (event) => event.preventDefault(), { passive: false });
 
   canvas.addEventListener("pointerdown", drop);
   playBtn.addEventListener("click", () => {
-    reset();
-    start();
+    requestStart(true);
   });
   dropBtn.addEventListener("click", drop);
   pauseBtn.addEventListener("click", togglePause);
+  muteBtn.addEventListener("click", () => {
+    muted = !muted;
+    localStorage.setItem(muteKey, muted ? "1" : "0");
+    syncMute();
+    playSound("drop");
+  });
   restartBtn.addEventListener("click", () => {
-    reset();
-    start();
+    requestStart(true);
   });
 
   reset();
   resize();
+  initPoki();
   cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(loop);
 }());

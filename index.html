@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <meta name="theme-color" content="#12141f">
   <title>Color Stack</title>
+  <script src="https://game-cdn.poki.com/scripts/v2/poki-sdk.js"></script>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="stylesheet" href="styles.css">
@@ -12,24 +13,29 @@
 <body>
   <main class="shell">
     <section class="topbar" aria-label="Game status">
-      <div>
-        <p class="label">Color Stack</p>
-        <h1>Drop clean. Climb fast.</h1>
+      <div class="brand">
+        <span class="mini-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <div>
+          <p class="label">Color Stack</p>
+          <h1>Build the tallest tower.</h1>
+        </div>
       </div>
       <div class="stats" aria-live="polite">
-        <span><b id="score">0</b> score</span>
-        <span><b id="best">0</b> best</span>
-        <span><b id="combo">x1</b> combo</span>
+        <span><b id="score">0</b><small>score</small></span>
+        <span><b id="best">0</b><small>best</small></span>
+        <span><b id="height">1</b><small>height</small></span>
+        <span><b id="combo">x1</b><small>combo</small></span>
       </div>
     </section>
 
     <section class="stage-wrap">
+      <p id="goal" class="goal">Goal: 10 blocks</p>
       <canvas id="game" width="900" height="1200" aria-label="Color Stack stacking game"></canvas>
       <div id="curtain" class="curtain">
-        <div class="mark" aria-hidden="true"></div>
-        <p class="label">Quick arcade prototype</p>
+        <div class="mark" aria-hidden="true"><span></span><b></b></div>
+        <p class="label">Color Stack</p>
         <h2>Color Stack</h2>
-        <p>Tap when the moving slab lines up. Edge catches still count, but a block that falls completely off the stack ends the run.</p>
+        <p>Stack the colors higher with clean drops and brave edge catches.</p>
         <button id="play" type="button">Play</button>
       </div>
     </section>
@@ -37,6 +43,7 @@
     <nav class="controls" aria-label="Game controls">
       <button id="drop" class="primary" type="button">Drop</button>
       <button id="pause" type="button">Pause</button>
+      <button id="mute" type="button" aria-pressed="false">Sound</button>
       <button id="restart" type="button">Restart</button>
     </nav>
   </main>
