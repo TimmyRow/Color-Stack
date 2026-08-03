@@ -322,7 +322,7 @@
     state.combo = perfect ? Math.min(9, state.combo + 1) : 1;
     state.perfectRun = perfect ? state.perfectRun + 1 : 0;
     if (placed.rainbow) state.rainbowLanded = true;
-    state.speed = Math.min(640, state.speed + 11 + state.combo * 1.5);
+    state.speed = getStackSpeed();
     state.message = placed.rainbow ? "Rainbow boost" : perfect ? "Perfect +" + state.combo : "Nice";
     state.messageT = placed.rainbow ? 1.05 : 0.75;
     state.bump = placed.rainbow ? 34 : perfect ? 22 : 10;
@@ -341,6 +341,11 @@
 
   function placedScorePreview(perfect, overlap, rainbow) {
     return (perfect ? 10 * state.combo : 4 + Math.ceil(overlap / 34)) + (rainbow ? 25 : 0);
+  }
+
+  function getStackSpeed() {
+    const height = Math.max(0, state.stack.length - 1);
+    return Math.min(820, 245 + Math.pow(height, 1.18) * 24 + state.combo * 7);
   }
 
   function placedSquash(points) {
