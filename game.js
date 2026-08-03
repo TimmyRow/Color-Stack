@@ -77,6 +77,7 @@
       chips: [],
       stars: [],
       rings: [],
+      floaters: [],
       active: null
     };
 
@@ -97,7 +98,8 @@
       dir: fromLeft ? 1 : -1,
       color: rainbow ? "#ffffff" : colors[state.stack.length % colors.length],
       rainbow,
-      settled: false
+      settled: false,
+      squash: 0
     };
   }
 
@@ -192,7 +194,8 @@
       color: active.color,
       rainbow: active.rainbow,
       settled: true,
-      perfect
+      perfect,
+      squash: placedSquash(placedScorePreview(perfect, overlap, active.rainbow))
     };
 
     state.stack.push(placed);
@@ -202,8 +205,8 @@
     } else {
       state.rainbowCooldown = Math.max(0, state.rainbowCooldown - 1);
     }
-    state.score += perfect ? 10 * state.combo : 4 + Math.ceil(overlap / 34);
-    if (placed.rainbow) state.score += 25;
+    const gained = placedScorePreview(perfect, overlap, placed.rainbow);
+    state.score += gained;
     state.combo = perfect ? Math.min(9, state.combo + 1) : 1;
     state.perfectRun = perfect ? state.perfectRun + 1 : 0;
     state.speed = Math.min(640, state.speed + 11 + state.combo * 1.5);
@@ -212,6 +215,7 @@
     state.bump = placed.rainbow ? 34 : perfect ? 22 : 10;
     state.shake = Math.max(state.shake, placed.rainbow ? 9 : perfect ? 5 : 2);
     burst(placed.x + placed.w / 2, placed.y + slabH / 2, placed.rainbow ? 22 : perfect ? state.combo + 7 : 5, placed.rainbow ? null : placed.color);
+    floatScore(placed.x + placed.w / 2, placed.y - 12, "+" + gained, placed.rainbow ? "#fff8e8" : placed.color);
     if (placed.rainbow) {
       state.rings.push({ x: placed.x + placed.w / 2, y: placed.y + slabH / 2, r: 30, life: 0.55 });
     }
@@ -219,6 +223,14 @@
     saveBest();
     syncHud();
     playSound(placed.rainbow ? "rainbow" : perfect ? "perfect" : "drop");
+  }
+
+  function placedScorePreview(perfect, overlap, rainbow) {
+    return (perfect ? 10 * state.combo : 4 + Math.ceil(overlap / 34)) + (rainbow ? 25 : 0);
+  }
+
+  function placedSquash(points) {
+    return Math.min(0.22, 0.08 + points / 220);
   }
 
   function widenTower(amount) {
@@ -257,6 +269,29 @@
         color: color || rainbowColors[i % rainbowColors.length]
       });
     }
+  }
+
+  function wallSparks(x, dir) {
+    for (let i = 0; i < 8; i += 1) {
+      state.stars.push({
+        x,
+        y: state.active.y + 18 + Math.random() * 24,
+        vx: -dir * (90 + Math.random() * 180),
+        vy: -80 + Math.random() * 160,
+        life: 0.25 + Math.random() * 0.22,
+        color: rainbowColors[i % rainbowColors.length]
+      });
+    }
+  }
+
+  function floatScore(x, y, text, color) {
+    state.floaters.push({
+      x,
+      y,
+      text,
+      color,
+      life: 0.85
+    });
   }
 
   function togglePause() {
@@ -315,12 +350,14 @@
         active.x = 0;
         active.dir = 1;
         state.wallFlash = 0.18;
+        wallSparks(0, -1);
         playSound("wall");
       }
       if (active.x + active.w >= W) {
         active.x = W - active.w;
         active.dir = -1;
         state.wallFlash = 0.18;
+        wallSparks(W, 1);
         playSound("wall");
       }
     }
@@ -353,6 +390,16 @@
       ring.r += 560 * dt;
     });
     state.rings = state.rings.filter((ring) => ring.life > 0);
+
+    state.floaters.forEach((floater) => {
+      floater.life -= dt;
+      floater.y -= 72 * dt;
+    });
+    state.floaters = state.floaters.filter((floater) => floater.life > 0);
+
+    state.stack.forEach((slab) => {
+      if (slab.squash) slab.squash = Math.max(0, slab.squash - dt * 1.9);
+    });
   }
 
   function draw() {
@@ -369,6 +416,7 @@
     state.chips.forEach(drawChip);
     state.stars.forEach(drawStar);
     state.rings.forEach(drawRing);
+    state.floaters.forEach(drawFloater);
 
     ctx.restore();
     drawGuide();
@@ -411,6 +459,12 @@
     ctx.shadowColor = "rgba(0,0,0,0.34)";
     ctx.shadowBlur = 16;
     ctx.shadowOffsetY = 10;
+    if (slab.squash) {
+      const squash = Math.sin(slab.squash * Math.PI * 4.5) * slab.squash;
+      ctx.translate(slab.x + slab.w / 2, y + slabH);
+      ctx.scale(1 + squash * 0.7, 1 - squash * 0.42);
+      ctx.translate(-(slab.x + slab.w / 2), -(y + slabH));
+    }
     roundRect(slab.x, y, slab.w, slabH, 8);
     ctx.fillStyle = slab.rainbow ? makeRainbowGradient(slab.x, slab.w) : makeSlabGradient(slab);
     ctx.fill();
@@ -487,6 +541,18 @@
     roundRect(-chip.w / 2, -chip.h / 2, chip.w, chip.h, 8);
     ctx.fillStyle = chip.rainbow ? makeRainbowGradient(-chip.w / 2, chip.w) : chip.color;
     ctx.fill();
+    ctx.restore();
+  }
+
+  function drawFloater(floater) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, floater.life * 2);
+    ctx.fillStyle = floater.color;
+    ctx.font = "900 34px Inter, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.shadowColor = "rgba(0,0,0,0.46)";
+    ctx.shadowBlur = 12;
+    ctx.fillText(floater.text, floater.x, floater.y);
     ctx.restore();
   }
 
