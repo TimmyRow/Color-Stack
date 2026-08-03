@@ -15,7 +15,7 @@
   const slabH = 58;
   const minWidth = 44;
   const bestKey = "stack-snap-best";
-  const colors = ["#ff5c7a", "#f7c85b", "#6ee7b7", "#55b7ff", "#b489ff", "#ff9f5c"];
+  const colors = ["#f7c85b", "#8b5cf6", "#22c55e", "#ef4444"];
   const poki = window.PokiSDK || null;
 
   let state;
@@ -28,7 +28,7 @@
       y: H - 118,
       w: 490,
       dir: 0,
-      color: "#394156",
+      color: colors[0],
       settled: true
     };
 
@@ -315,7 +315,7 @@
   function drawGuide() {
     if (!state.running || state.over || state.paused) return;
     const top = state.stack[state.stack.length - 1];
-    const screenY = top.y - state.cameraY;
+    const screenY = top.y + state.cameraY;
     ctx.strokeStyle = "rgba(247, 200, 91, 0.7)";
     ctx.lineWidth = 3;
     ctx.setLineDash([12, 12]);
