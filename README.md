@@ -20,9 +20,18 @@ Open `index.html` in a browser. Press Space, Enter, ArrowDown, or tap/click the 
 - Static HTML/CSS/JS with no build step
 - Poki SDK hook points for loading, gameplay, pause, game-over, and replay breaks
 
-## Later Poki Prep
+## Poki Prep
 
-- Add Poki SDK loading according to Poki's current integration guide.
-- Add rewarded/ad break moments between runs once the core loop is tuned.
-- Add a 16:9 and portrait QA pass for Poki embed sizes.
-- Add sound settings and mute persistence before publishing.
+- Loads the Poki HTML5 SDK in `index.html`.
+- Calls `gameLoadingFinished()` after SDK init resolves.
+- Calls `gameplayStart()` only when gameplay begins or resumes.
+- Calls `gameplayStop()` when gameplay pauses or ends.
+- Uses `commercialBreak()` before starting/restarting runs.
+- Locks input and suspends game audio during ad breaks.
+- Prevents game-key and wheel page scrolling for embedded review pages.
+
+## Remaining Poki Prep
+
+- Create final static and animated thumbnails.
+- Run the build through Poki Inspector before review.
+- Tune ad/reward pacing after playtesting.

@@ -39,16 +39,37 @@
   let audioCtx = null;
   let muted = localStorage.getItem(muteKey) === "1";
   let adLocked = false;
+  let pokiReady = false;
+  let gameplayActive = false;
+  let audioSuspendedForAd = false;
 
   function initPoki() {
-    const sdk = window.PokiSDK;
-    if (!sdk) return;
-    sdk.init()
+    const sdk = getPoki();
+    if (!sdk) {
+      pokiReady = true;
+      return;
+    }
+    Promise.resolve(sdk.init())
       .catch(() => undefined)
       .then(() => {
-        if (sdk.gameLoadingFinished) sdk.gameLoadingFinished();
-        if (sdk.movePill) sdk.movePill(0, 18);
+        pokiReady = true;
+        callPoki("gameLoadingFinished");
+        callPoki("movePill", 0, 18);
       });
+  }
+
+  function getPoki() {
+    return window.PokiSDK || null;
+  }
+
+  function callPoki(method, ...args) {
+    const sdk = getPoki();
+    if (!sdk || typeof sdk[method] !== "function") return undefined;
+    try {
+      return sdk[method](...args);
+    } catch (error) {
+      return undefined;
+    }
   }
 
   function reset() {
@@ -129,25 +150,25 @@
   function requestStart(resetFirst) {
     if (adLocked) return;
     if (resetFirst) reset();
-    const sdk = window.PokiSDK;
-    if (!sdk || !sdk.commercialBreak) {
+    if (!pokiReady || !getPoki() || typeof getPoki().commercialBreak !== "function") {
       start();
       return;
     }
 
     adLocked = true;
     if (state.running && !state.paused) stopGameplay();
-    sdk.commercialBreak(() => {
-      adLocked = true;
-    }).catch(() => undefined).then(() => {
+    pauseForAd();
+    Promise.resolve(callPoki("commercialBreak", pauseForAd))
+      .catch(() => undefined)
+      .then(() => {
       adLocked = false;
+      resumeFromAd();
       start();
     });
   }
 
   function start() {
-    const sdk = window.PokiSDK;
-    if (sdk && sdk.gameplayStart) sdk.gameplayStart();
+    startGameplay();
     state.running = true;
     state.paused = false;
     state.over = false;
@@ -157,8 +178,30 @@
   }
 
   function stopGameplay() {
-    const sdk = window.PokiSDK;
-    if (sdk && sdk.gameplayStop) sdk.gameplayStop();
+    if (!gameplayActive) return;
+    gameplayActive = false;
+    callPoki("gameplayStop");
+  }
+
+  function startGameplay() {
+    if (gameplayActive) return;
+    gameplayActive = true;
+    callPoki("gameplayStart");
+  }
+
+  function pauseForAd() {
+    adLocked = true;
+    if (audioCtx && audioCtx.state === "running") {
+      audioSuspendedForAd = true;
+      audioCtx.suspend();
+    }
+  }
+
+  function resumeFromAd() {
+    if (audioSuspendedForAd && audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+    audioSuspendedForAd = false;
   }
 
   function gameOver() {
@@ -326,8 +369,7 @@
     if (state.paused) {
       stopGameplay();
     } else {
-      const sdk = window.PokiSDK;
-      if (sdk && sdk.gameplayStart) sdk.gameplayStart();
+      startGameplay();
     }
   }
 
@@ -550,6 +592,7 @@
 
   function playSound(type) {
     if (muted) return;
+    if (adLocked) return;
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
     if (!audioCtx) audioCtx = new AudioContext();
