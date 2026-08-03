@@ -18,7 +18,7 @@ Open `index.html` in a browser. Press Space, Enter, ArrowDown, or tap/click the 
 - Sound effects with mute persistence
 - Keyboard, pointer, and touch-friendly controls
 - iPhone/iPad portrait and landscape layout support
-- Local high score through `localStorage`
+- Device-only progress through `localStorage`
 - Static HTML/CSS/JS with no build step
 - Poki SDK hook points for loading, gameplay, pause, game-over, and replay breaks
 
@@ -31,6 +31,7 @@ Open `index.html` in a browser. Press Space, Enter, ArrowDown, or tap/click the 
 - Uses `commercialBreak()` before starting/restarting runs.
 - Locks input and suspends game audio during ad breaks.
 - Prevents game-key and wheel page scrolling for embedded review pages.
+- Does not call Poki account, token, or cloud-save APIs; progress stays on the player's device.
 
 ## Remaining Poki Prep
 

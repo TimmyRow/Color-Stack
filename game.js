@@ -59,14 +59,15 @@
   let rafId = 0;
   let last = 0;
   let audioCtx = null;
-  let muted = localStorage.getItem(muteKey) === "1";
+  const memorySave = {};
+  let muted = getSave(muteKey, "0") === "1";
   let adLocked = false;
   let pokiReady = false;
   let gameplayActive = false;
   let audioSuspendedForAd = false;
   let lastTapDrop = 0;
-  let activeBackground = getItem(backgrounds, localStorage.getItem(backgroundKey) || "grid");
-  let activeBlockTheme = getItem(blockThemes, localStorage.getItem(blockThemeKey) || "classic");
+  let activeBackground = getItem(backgrounds, getSave(backgroundKey, "grid"));
+  let activeBlockTheme = getItem(blockThemes, getSave(blockThemeKey, "classic"));
   let colors = activeBlockTheme.colors;
 
   function initPoki() {
@@ -86,6 +87,25 @@
 
   function getPoki() {
     return window.PokiSDK || null;
+  }
+
+  function getSave(key, fallback) {
+    try {
+      const value = window.localStorage.getItem(key);
+      return value === null ? fallback : value;
+    } catch (error) {
+      return Object.prototype.hasOwnProperty.call(memorySave, key) ? memorySave[key] : fallback;
+    }
+  }
+
+  function setSave(key, value) {
+    const stringValue = String(value);
+    memorySave[key] = stringValue;
+    try {
+      window.localStorage.setItem(key, stringValue);
+    } catch (error) {
+      // Device storage can be unavailable in private/restricted modes.
+    }
   }
 
   function callPoki(method, ...args) {
@@ -124,11 +144,11 @@
       rainbowLanded: false,
       missionDone: false,
       runCoins: 0,
-      coins: Number(localStorage.getItem(coinsKey) || 0),
-      missionIndex: Number(localStorage.getItem(missionKey) || 0) % missions.length,
-      runs: Number(localStorage.getItem(runsKey) || 0),
-      best: Number(localStorage.getItem(bestKey) || localStorage.getItem("stack-snap-best") || 0),
-      bestHeight: Number(localStorage.getItem(bestHeightKey) || 1),
+      coins: Number(getSave(coinsKey, 0)),
+      missionIndex: Number(getSave(missionKey, 0)) % missions.length,
+      runs: Number(getSave(runsKey, 0)),
+      best: Number(getSave(bestKey, getSave("stack-snap-best", 0))),
+      bestHeight: Number(getSave(bestHeightKey, 1)),
       speed: 255,
       cameraY: 0,
       shake: 0,
@@ -236,7 +256,7 @@
     state.over = true;
     awardRunCoins();
     state.runs += 1;
-    localStorage.setItem(runsKey, String(state.runs));
+    setSave(runsKey, state.runs);
     state.shake = 18;
     state.message = "Off the edge";
     state.messageT = 2;
@@ -404,11 +424,11 @@
   function saveBest() {
     if (state.score > state.best) {
       state.best = state.score;
-      localStorage.setItem(bestKey, String(state.best));
+      setSave(bestKey, state.best);
     }
     if (state.stack.length > state.bestHeight) {
       state.bestHeight = state.stack.length;
-      localStorage.setItem(bestHeightKey, String(state.bestHeight));
+      setSave(bestHeightKey, state.bestHeight);
     }
   }
 
@@ -421,7 +441,7 @@
   function addCoins(amount) {
     state.runCoins += amount;
     state.coins += amount;
-    localStorage.setItem(coinsKey, String(state.coins));
+    setSave(coinsKey, state.coins);
     floatScore(W - 168, state.active ? state.active.y - 18 : H - 220, "+" + amount + " coins", "#f7c85b");
   }
 
@@ -435,7 +455,7 @@
     state.messageT = 1.15;
     playSound("mission");
     state.missionIndex = (state.missionIndex + 1) % missions.length;
-    localStorage.setItem(missionKey, String(state.missionIndex));
+    setSave(missionKey, state.missionIndex);
   }
 
   function syncHud() {
@@ -454,7 +474,7 @@
 
   function getOwned(key, fallback) {
     try {
-      const parsed = JSON.parse(localStorage.getItem(key) || "[]");
+      const parsed = JSON.parse(getSave(key, "[]"));
       return new Set([fallback, ...parsed]);
     } catch (error) {
       return new Set([fallback]);
@@ -462,7 +482,7 @@
   }
 
   function saveOwned(key, owned) {
-    localStorage.setItem(key, JSON.stringify([...owned]));
+    setSave(key, JSON.stringify([...owned]));
   }
 
   function renderShop() {
@@ -507,7 +527,7 @@
     if (!owned.has(item.id)) {
       if (state.coins < item.cost) return;
       state.coins -= item.cost;
-      localStorage.setItem(coinsKey, String(state.coins));
+      setSave(coinsKey, state.coins);
       owned.add(item.id);
       saveOwned(ownedKey, owned);
       floatScore(W / 2, state.active ? state.active.y - 28 : H - 260, "-" + item.cost + " coins", "#f7c85b");
@@ -516,10 +536,10 @@
     if (type === "blocks") {
       activeBlockTheme = item;
       colors = item.colors;
-      localStorage.setItem(blockThemeKey, item.id);
+      setSave(blockThemeKey, item.id);
     } else {
       activeBackground = item;
-      localStorage.setItem(backgroundKey, item.id);
+      setSave(backgroundKey, item.id);
     }
     syncHud();
     renderShop();
@@ -909,7 +929,7 @@
   pauseBtn.addEventListener("click", togglePause);
   muteBtn.addEventListener("click", () => {
     muted = !muted;
-    localStorage.setItem(muteKey, muted ? "1" : "0");
+    setSave(muteKey, muted ? "1" : "0");
     syncMute();
     playSound("drop");
   });
