@@ -11,11 +11,15 @@
   const playBtn = document.getElementById("play");
   const dropBtn = document.getElementById("drop");
   const shopBtn = document.getElementById("shop");
+  const qrBtn = document.getElementById("qr");
   const pauseBtn = document.getElementById("pause");
   const muteBtn = document.getElementById("mute");
   const restartBtn = document.getElementById("restart");
   const shopPanel = document.getElementById("shopPanel");
   const shopCloseBtn = document.getElementById("shopClose");
+  const qrPanel = document.getElementById("qrPanel");
+  const qrCloseBtn = document.getElementById("qrClose");
+  const qrCopyBtn = document.getElementById("qrCopy");
   const shopCoinsEl = document.getElementById("shopCoins");
   const backgroundShopEl = document.getElementById("backgroundShop");
   const blockShopEl = document.getElementById("blockShop");
@@ -33,6 +37,7 @@
   const blockThemeKey = "color-stack-block-theme";
   const ownedBackgroundsKey = "color-stack-owned-backgrounds";
   const ownedBlocksKey = "color-stack-owned-blocks";
+  const qrUrl = "https://timmyrow.github.io/Color-Stack/";
   const defaultColors = ["#f7c85b", "#8b5cf6", "#22c55e", "#ef4444"];
   const rainbowColors = ["#f7c85b", "#8b5cf6", "#ef4444", "#22c55e"];
   const backgrounds = [
@@ -563,6 +568,32 @@
     shopPanel.classList.add("hidden");
   }
 
+  function openQr() {
+    qrPanel.classList.remove("hidden");
+    qrCopyBtn.textContent = "Copy Link";
+    if (state.running && !state.paused && !state.over) {
+      togglePause();
+    }
+  }
+
+  function closeQr() {
+    qrPanel.classList.add("hidden");
+  }
+
+  function copyQrLink() {
+    if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+      qrCopyBtn.textContent = "Copy Unavailable";
+      return;
+    }
+    navigator.clipboard.writeText(qrUrl)
+      .then(() => {
+        qrCopyBtn.textContent = "Copied";
+      })
+      .catch(() => {
+        qrCopyBtn.textContent = "Copy Unavailable";
+      });
+  }
+
   function getGoalText() {
     if (state.active && state.active.rainbow) return "Rainbow block";
     if (state.missionDone) return "Mission complete";
@@ -987,6 +1018,12 @@
   shopCloseBtn.addEventListener("click", closeShop);
   shopPanel.addEventListener("click", (event) => {
     if (event.target === shopPanel) closeShop();
+  });
+  qrBtn.addEventListener("click", openQr);
+  qrCloseBtn.addEventListener("click", closeQr);
+  qrCopyBtn.addEventListener("click", copyQrLink);
+  qrPanel.addEventListener("click", (event) => {
+    if (event.target === qrPanel) closeQr();
   });
   pauseBtn.addEventListener("click", togglePause);
   muteBtn.addEventListener("click", () => {

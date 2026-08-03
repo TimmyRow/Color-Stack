@@ -303,7 +303,7 @@ canvas {
 
 .controls {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) auto auto auto auto;
+  grid-template-columns: minmax(120px, 1fr) auto auto auto auto auto;
   gap: 10px;
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -431,6 +431,50 @@ canvas {
   box-shadow: none;
 }
 
+.qr-card {
+  width: min(430px, 100%);
+  text-align: center;
+}
+
+.qr-code {
+  display: block;
+  width: min(260px, 74vw);
+  aspect-ratio: 1;
+  margin: 18px auto 10px;
+  border: 10px solid #fff8e8;
+  border-radius: 8px;
+  background: #fff8e8;
+  image-rendering: pixelated;
+}
+
+.qr-link {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.qr-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.qr-actions a {
+  display: grid;
+  min-height: 46px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #242837;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 12px 28px var(--shadow);
+}
+
 @media (max-width: 720px) {
   .shell {
     gap: 10px;
@@ -461,7 +505,7 @@ canvas {
   }
 
   .controls {
-    grid-template-columns: 1fr repeat(4, 0.66fr);
+    grid-template-columns: 1fr repeat(5, 0.62fr);
   }
 
   button {
@@ -493,7 +537,7 @@ canvas {
   }
 
   .controls {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
 
   #drop {
@@ -516,7 +560,7 @@ canvas {
   }
 
   .controls {
-    grid-template-columns: minmax(220px, 1fr) repeat(4, minmax(96px, auto));
+    grid-template-columns: minmax(220px, 1fr) repeat(5, minmax(72px, auto));
   }
 }
 
@@ -557,7 +601,7 @@ canvas {
   }
 
   .controls {
-    grid-template-columns: minmax(180px, 1fr) repeat(4, auto);
+    grid-template-columns: minmax(180px, 1fr) repeat(5, auto);
   }
 
   .goal {

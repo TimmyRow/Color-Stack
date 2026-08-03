@@ -15,6 +15,7 @@ Open `index.html` in a browser. Press Space, Enter, ArrowDown, or tap/click the 
 - Height goals and best tower tracking
 - Persistent missions, run rewards, and coins
 - Coin shop with unlockable backgrounds and block color sets
+- QR code share button for the public game link
 - Sound effects with mute persistence
 - Keyboard, pointer, and touch-friendly controls
 - iPhone/iPad portrait and landscape layout support

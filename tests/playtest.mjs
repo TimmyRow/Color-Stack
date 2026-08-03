@@ -229,6 +229,19 @@ async function shopAndPersistence(browser) {
   console.log("PASS shop persistence and device-only save checks");
 }
 
+async function qrModalSmoke(browser) {
+  await withPage(browser, profiles[0], "qr modal", async (page) => {
+    await openGame(page);
+    await page.locator("#qr").click();
+    await expect(await page.locator("#qrPanel:not(.hidden)").count() === 1, "QR panel did not open");
+    await expect(await page.locator(".qr-code").evaluate((image) => image.complete), "QR image did not load");
+    await expect(await page.locator(".qr-actions a").getAttribute("href") === "https://timmyrow.github.io/Color-Stack/", "QR link points at the wrong URL");
+    await page.locator("#qrClose").click();
+    await expect(await page.locator("#qrPanel.hidden").count() === 1, "QR panel did not close");
+  });
+  console.log("PASS QR modal share button");
+}
+
 async function storageBlockedFallback(browser) {
   await withPage(browser, profiles[1], "storage blocked fallback", async (page) => {
     await openGame(page);
@@ -236,7 +249,7 @@ async function storageBlockedFallback(browser) {
     await playDrops(page, 5);
     await page.locator("#shop").click();
     await expect(await page.locator("#shopClose").isVisible(), "storage blocked shop close button is not visible");
-    await page.locator(".shop-card").evaluate((element) => {
+    await page.locator("#shopPanel .shop-card").evaluate((element) => {
       element.scrollTop = element.scrollHeight;
     });
     await expect(await page.locator(".shop-item", { hasText: "Ember Blocks" }).locator("button").isVisible(), "storage blocked shop did not scroll to lower items");
@@ -252,6 +265,7 @@ async function run() {
       await gameplaySmoke(browser, profile);
     }
     await shopAndPersistence(browser);
+    await qrModalSmoke(browser);
     await storageBlockedFallback(browser);
   } finally {
     await browser.close();
