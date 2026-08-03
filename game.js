@@ -738,27 +738,84 @@
     if (audioCtx.state === "suspended") audioCtx.resume();
 
     const now = audioCtx.currentTime;
+    if (type === "wall") {
+      popTone(168, 112, 0.045, 0.032, "square", now);
+      popTone(82, 64, 0.035, 0.018, "sine", now + 0.006);
+      return;
+    }
+
+    if (type === "drop") {
+      popTone(620, 920, 0.08, 0.055, "triangle", now);
+      popTone(1240, 1480, 0.05, 0.028, "sine", now + 0.035);
+      return;
+    }
+
+    if (type === "perfect") {
+      popTone(760, 1180, 0.075, 0.06, "triangle", now);
+      popTone(1140, 1640, 0.085, 0.045, "sine", now + 0.045);
+      return;
+    }
+
+    if (type === "fail") {
+      noiseBurst(now, 0.26, 0.16);
+      popTone(170, 48, 0.24, 0.11, "sawtooth", now);
+      popTone(72, 38, 0.18, 0.08, "square", now + 0.045);
+      return;
+    }
+
+    if (type === "rainbow") {
+      popTone(420, 840, 0.11, 0.06, "triangle", now);
+      popTone(630, 1260, 0.13, 0.052, "triangle", now + 0.045);
+      popTone(945, 1890, 0.16, 0.045, "sine", now + 0.09);
+      return;
+    }
+
+    if (type === "mission") {
+      popTone(520, 980, 0.09, 0.055, "triangle", now);
+      popTone(780, 1320, 0.12, 0.04, "sine", now + 0.065);
+      return;
+    }
+
+    popTone(220, 330, 0.07, 0.055, "triangle", now);
+  }
+
+  function popTone(startHz, endHz, length, volume, wave, startAt) {
+    const now = startAt;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    const tone = {
-      start: [220, 330, 0.07],
-      drop: [260, 190, 0.055],
-      perfect: [520, 780, 0.09],
-      wall: [140, 110, 0.035],
-      fail: [150, 70, 0.18],
-      rainbow: [330, 990, 0.16],
-      mission: [440, 880, 0.13]
-    }[type] || [240, 180, 0.05];
-
-    osc.type = type === "perfect" || type === "rainbow" || type === "mission" ? "triangle" : "square";
-    osc.frequency.setValueAtTime(tone[0], now);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(40, tone[1]), now + tone[2]);
+    osc.type = wave;
+    osc.frequency.setValueAtTime(Math.max(40, startHz), now);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(40, endHz), now + length);
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(type === "wall" ? 0.025 : 0.07, now + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + tone[2]);
+    gain.gain.exponentialRampToValueAtTime(volume, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + length);
     osc.connect(gain).connect(audioCtx.destination);
     osc.start(now);
-    osc.stop(now + tone[2] + 0.01);
+    osc.stop(now + length + 0.02);
+  }
+
+  function noiseBurst(startAt, length, volume) {
+    const bufferSize = Math.max(1, Math.floor(audioCtx.sampleRate * length));
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i += 1) {
+      const envelope = 1 - i / bufferSize;
+      data[i] = (Math.random() * 2 - 1) * envelope;
+    }
+
+    const noise = audioCtx.createBufferSource();
+    const filter = audioCtx.createBiquadFilter();
+    const gain = audioCtx.createGain();
+    noise.buffer = buffer;
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(720, startAt);
+    filter.frequency.exponentialRampToValueAtTime(96, startAt + length);
+    filter.Q.setValueAtTime(7, startAt);
+    gain.gain.setValueAtTime(volume, startAt);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + length);
+    noise.connect(filter).connect(gain).connect(audioCtx.destination);
+    noise.start(startAt);
+    noise.stop(startAt + length);
   }
 
   function unlockAudio() {
