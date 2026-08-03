@@ -10,7 +10,7 @@ Open `index.html` in a browser. Press Space, Enter, ArrowDown, or tap/click the 
 
 - One-button stacking loop with shrinking slabs
 - Runs only end when a block misses the stack completely
-- Rainbow blocks widen the whole tower when landed
+- Random rainbow blocks widen the whole tower when landed
 - Perfect-drop combo scoring
 - Height goals and best tower tracking
 - Sound effects with mute persistence

@@ -70,6 +70,7 @@
       shake: 0,
       bump: 0,
       wallFlash: 0,
+      rainbowCooldown: 3,
       message: "Tap to drop",
       messageT: 1.8,
       stack: [base],
@@ -88,7 +89,7 @@
   function spawnSlab() {
     const top = state.stack[state.stack.length - 1];
     const fromLeft = state.stack.length % 2 === 0;
-    const rainbow = isRainbowTurn();
+    const rainbow = shouldSpawnRainbow();
     state.active = {
       x: state.stack.length === 1 ? top.x : fromLeft ? -top.w - 30 : W + 30,
       y: top.y - slabH,
@@ -100,8 +101,10 @@
     };
   }
 
-  function isRainbowTurn() {
-    return state.stack.length > 1 && state.stack.length % 7 === 0;
+  function shouldSpawnRainbow() {
+    if (state.stack.length < 4 || state.rainbowCooldown > 0) return false;
+    const chance = Math.min(0.3, 0.12 + state.stack.length * 0.006);
+    return Math.random() < chance;
   }
 
   function requestStart(resetFirst) {
@@ -194,7 +197,10 @@
 
     state.stack.push(placed);
     if (placed.rainbow) {
-      widenTower(34);
+      widenTower(56);
+      state.rainbowCooldown = 4;
+    } else {
+      state.rainbowCooldown = Math.max(0, state.rainbowCooldown - 1);
     }
     state.score += perfect ? 10 * state.combo : 4 + Math.ceil(overlap / 34);
     if (placed.rainbow) state.score += 25;
@@ -288,8 +294,7 @@
 
   function getGoalText() {
     if (state.active && state.active.rainbow) return "Rainbow block";
-    const nextRainbow = 7 - (state.stack.length % 7);
-    if (nextRainbow > 0 && nextRainbow <= 2) return "Rainbow in " + nextRainbow;
+    if (state.rainbowCooldown === 0 && state.stack.length >= 4) return "Rainbow ready";
     if (state.stack.length >= 25) return "Goal: 25 blocks cleared";
     if (state.perfectRun >= 3) return "Goal: 3 perfects cleared";
     if (state.stack.length >= 10) return "Goal: 10 blocks cleared";
