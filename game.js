@@ -13,7 +13,6 @@
   const W = 900;
   const H = 1200;
   const slabH = 58;
-  const minWidth = 44;
   const bestKey = "stack-snap-best";
   const colors = ["#f7c85b", "#8b5cf6", "#22c55e", "#ef4444"];
   const poki = window.PokiSDK || null;
@@ -33,8 +32,8 @@
     };
 
     curtain.querySelector(".label").textContent = "Quick arcade prototype";
-    curtain.querySelector("h2").textContent = "Stack Snap";
-    curtain.querySelector("p:not(.label)").textContent = "Tap when the moving slab lines up. Tiny misses shrink the next slab. Perfect drops build combo, speed, and a taller tower.";
+    curtain.querySelector("h2").textContent = "Color Stack";
+    curtain.querySelector("p:not(.label)").textContent = "Tap when the moving slab lines up. Edge catches still count, but a block that falls completely off the stack ends the run.";
     playBtn.textContent = "Play";
 
     state = {
@@ -86,12 +85,12 @@
     state.running = false;
     state.over = true;
     state.shake = 18;
-    state.message = "Tower dropped";
+    state.message = "Off the edge";
     state.messageT = 2;
     curtain.classList.remove("hidden");
     curtain.querySelector(".label").textContent = "Final score " + state.score;
     curtain.querySelector("h2").textContent = "Try Again";
-    curtain.querySelector("p:not(.label)").textContent = "Line up the next slab before it slides away. Perfect drops keep your tower wide and your combo alive.";
+    curtain.querySelector("p:not(.label)").textContent = "You only lose when a block misses the stack completely. Catch even a tiny edge to keep climbing.";
     playBtn.textContent = "Restart";
     if (poki && poki.gameplayStop) poki.gameplayStop();
   }
@@ -109,7 +108,7 @@
     const right = Math.min(active.x + active.w, top.x + top.w);
     const overlap = right - left;
 
-    if (overlap < minWidth) {
+    if (overlap <= 0) {
       state.chips.push(makeChip(active.x, active.y, active.w, active.color, active.dir));
       gameOver();
       return;

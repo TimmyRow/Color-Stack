@@ -1,6 +1,6 @@
-# Stack Snap
+# Color Stack
 
-A quick static stacking game prototype aimed at fast web play and future Poki packaging.
+A quick static color stacking game prototype aimed at fast web play and future Poki packaging.
 
 ## Play
 
@@ -9,6 +9,7 @@ Open `index.html` in a browser. Press Space, Enter, ArrowDown, or tap/click the 
 ## Current Features
 
 - One-button stacking loop with shrinking slabs
+- Runs only end when a block misses the stack completely
 - Perfect-drop combo scoring
 - Keyboard, pointer, and touch-friendly controls
 - Local high score through `localStorage`
